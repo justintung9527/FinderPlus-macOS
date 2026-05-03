@@ -20,26 +20,98 @@ class FinderSync: FIFinderSync {
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         // produce a menu for the extension
         let menu = NSMenu(title: "")
-        menu.addItem(withTitle: "Create file", action: #selector(createEmptyFileClicked(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "Open terminal", action: #selector(openTerminalClicked(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "新建文件", action: #selector(createEmptyFileClicked(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "复制路径", action: #selector(copyPathClicked(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "用TRAE打开", action: #selector(openTraeClicked(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "用Zed打开", action: #selector(openZedClicked(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "进入Ghostty", action: #selector(openGhosttyClicked(_:)), keyEquivalent: "")
 
         return menu
     }
-
-    /// Open a macOS terminal window in current folder
-    @IBAction func openTerminalClicked(_ sender: AnyObject?) {
+    @IBAction func copyPathClicked(_ sender: AnyObject?) {
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+        
+        var paths: [String] = []
+        if !items.isEmpty {
+            paths = items.map { $0.path }
+        } else if let target = FIFinderSyncController.default().targetedURL() {
+            paths = [target.path]
+        }
+        
+        guard !paths.isEmpty else { return }
+        
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects(paths as [NSString])
+    }
+    @IBAction func openZedClicked(_ sender: AnyObject?) {
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+        
+        var urlsToOpen: [URL] = []
+        if !items.isEmpty {
+            urlsToOpen = items
+        } else if let target = FIFinderSyncController.default().targetedURL() {
+            urlsToOpen = [target]
+        }
+        
+        guard !urlsToOpen.isEmpty else { return }
+        
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        
+        var arguments = ["-a", "zed"]
+        for url in urlsToOpen {
+            arguments.append(url.path)
+        }
+        task.arguments = arguments
+        
+        do {
+            try task.run()
+        } catch let error as NSError {
+            print("Zed.app打开失败: \(error.description)")
+        }
+    }
+    @IBAction func openTraeClicked(_ sender: AnyObject?) {
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+        
+        var urlsToOpen: [URL] = []
+        if !items.isEmpty {
+            urlsToOpen = items
+        } else if let target = FIFinderSyncController.default().targetedURL() {
+            urlsToOpen = [target]
+        }
+        
+        guard !urlsToOpen.isEmpty else { return }
+        
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        
+        var arguments = ["-a", "trae"]
+        for url in urlsToOpen {
+            arguments.append(url.path)
+        }
+        task.arguments = arguments
+        
+        do {
+            try task.run()
+        } catch let error as NSError {
+            print("Trae.app打开失败: \(error.description)")
+        }
+    }
+    /// Open a macOS ghostty window in current folder
+    @IBAction func openGhosttyClicked(_ sender: AnyObject?) {
         guard let target = FIFinderSyncController.default().targetedURL() else {
             return
         }
         
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        task.arguments = ["-a", "terminal", "\(target.path)"]
+        task.arguments = ["-a", "ghostty", "\(target.path)"]
         
         do {
             try task.run()
         } catch let error as NSError {
-            print("Failed to open Terminal.app: \(error.description)")
+            print("进入Ghostty失败: \(error.description)")
         }
     }
 
@@ -51,8 +123,8 @@ class FinderSync: FIFinderSync {
         }
 
         var originalPath = target
-        let originalFilename = "newfile"
-        var filename = "newfile.txt"
+        let originalFilename = "未命名"
+        var filename = "未命名.txt"
         let fileType = ".txt"
         var counter = 1
         
@@ -62,10 +134,17 @@ class FinderSync: FIFinderSync {
             originalPath = target
         }
         
+        let fileURL = target.appendingPathComponent(filename)
         do {
-            try "".write(to: target.appendingPathComponent(filename), atomically: true, encoding: String.Encoding.utf8)
+            try "".write(to: fileURL, atomically: true, encoding: String.Encoding.utf8)
+            
+            // 使用默认编辑器打开新创建的文件
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            task.arguments = [fileURL.path]
+            try task.run()
         } catch let error as NSError {
-            print("Failed to create file: \(error.description)")
+            print("创建或打开文件失败: \(error.description)")
         }
     }
 }
