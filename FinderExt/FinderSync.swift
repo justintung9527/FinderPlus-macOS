@@ -7,6 +7,7 @@
 
 import Cocoa
 import FinderSync
+import UserNotifications
 
 class FinderSync: FIFinderSync {
     
@@ -15,11 +16,19 @@ class FinderSync: FIFinderSync {
         
         // set up the directory we are syncing
         FIFinderSyncController.default().directoryURLs = [URL(fileURLWithPath: "/")]
+        
+        // 请求通知权限
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                print("请求通知权限失败: \(error.localizedDescription)")
+            }
+        }
     }
     
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         // produce a menu for the extension
         let menu = NSMenu(title: "")
+        menu.addItem(withTitle: "进入父目录", action: #selector(openParentDirectoryClicked(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "新建文件", action: #selector(createEmptyFileClicked(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "复制路径", action: #selector(copyPathClicked(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "用TRAE打开", action: #selector(openTraeClicked(_:)), keyEquivalent: "")
@@ -27,6 +36,41 @@ class FinderSync: FIFinderSync {
         menu.addItem(withTitle: "进入Ghostty", action: #selector(openGhosttyClicked(_:)), keyEquivalent: "")
 
         return menu
+    }
+    @IBAction func openParentDirectoryClicked(_ sender: AnyObject?) {
+        guard let target = FIFinderSyncController.default().targetedURL() else {
+            return
+        }
+        // 使用 standardized 获取标准化路径，避免尾部斜杠或符号链接导致删除组件失败
+        let currentURL = target.standardized
+        let parentURL = currentURL.deletingLastPathComponent().standardized
+        
+        // 如果当前路径已经是根目录，或者删除最后一部分后路径没变，说明已在根目录
+        if currentURL.path == "/" || parentURL.path == currentURL.path {
+            let content = UNMutableNotificationContent()
+            content.title = "提示"
+            content.body = "已在根目录"
+            content.sound = .default
+            
+            let request = UNNotificationRequest(identifier: "FinderPlusRootDirectory", content: content, trigger: nil)
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("发送原生通知失败: \(error.localizedDescription)")
+                }
+            }
+            return
+        }
+        
+        // 使用系统 open 命令打开父目录，以解决沙盒权限问题
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = [parentURL.path]
+        
+        do {
+            try task.run()
+        } catch let error as NSError {
+            print("进入父目录失败: \(error.localizedDescription)")
+        }
     }
     @IBAction func copyPathClicked(_ sender: AnyObject?) {
         let items = FIFinderSyncController.default().selectedItemURLs() ?? []
