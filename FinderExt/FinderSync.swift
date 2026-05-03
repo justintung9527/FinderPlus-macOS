@@ -28,12 +28,31 @@ class FinderSync: FIFinderSync {
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         // produce a menu for the extension
         let menu = NSMenu(title: "")
-        menu.addItem(withTitle: "进入父目录", action: #selector(openParentDirectoryClicked(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "新建文件", action: #selector(createEmptyFileClicked(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "复制路径", action: #selector(copyPathClicked(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "用TRAE打开", action: #selector(openTraeClicked(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "用Zed打开", action: #selector(openZedClicked(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "进入Ghostty", action: #selector(openGhosttyClicked(_:)), keyEquivalent: "")
+        
+        let parentItem = NSMenuItem(title: "进入父目录", action: #selector(openParentDirectoryClicked(_:)), keyEquivalent: "")
+        parentItem.image = NSImage(systemSymbolName: "arrow.up.circle", accessibilityDescription: nil)
+        menu.addItem(parentItem)
+
+        
+        let copyPathItem = NSMenuItem(title: "复制路径", action: #selector(copyPathClicked(_:)), keyEquivalent: "")
+        copyPathItem.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
+        menu.addItem(copyPathItem)
+        
+        let createFileItem = NSMenuItem(title: "新建TXT文件", action: #selector(createEmptyFileClicked(_:)), keyEquivalent: "")
+        createFileItem.image = NSImage(systemSymbolName: "doc.badge.plus", accessibilityDescription: nil)
+        menu.addItem(createFileItem)
+        
+        let openTraeItem = NSMenuItem(title: "用TRAE打开", action: #selector(openTraeClicked(_:)), keyEquivalent: "")
+        openTraeItem.image = NSImage(systemSymbolName: "arrow.up.right.square", accessibilityDescription: nil)
+        menu.addItem(openTraeItem)
+        
+        let openZedItem = NSMenuItem(title: "用Zed打开", action: #selector(openZedClicked(_:)), keyEquivalent: "")
+        openZedItem.image = NSImage(systemSymbolName: "arrow.up.right.square", accessibilityDescription: nil)
+        menu.addItem(openZedItem)
+        
+        let openGhosttyItem = NSMenuItem(title: "进入Ghostty", action: #selector(openGhosttyClicked(_:)), keyEquivalent: "")
+        openGhosttyItem.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
+        menu.addItem(openGhosttyItem)
 
         return menu
     }
